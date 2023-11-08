@@ -11,7 +11,9 @@ const port = process.env.PORT || 5000
 // middleware
 app.use(cors({
     origin: [
-        "http://localhost:5173"
+        // "http://localhost:5173"
+        "https://job-hunter-b5910.web.app",
+        "https://job-hunter-b5910.firebaseapp.com"
     ],
     credentials: true
 }))
@@ -38,24 +40,25 @@ const logger = async (req, res, next) => {
     next();
 };
 
-// const verifyToken = async (req, res, next) => {
-//     const token = req?.cookies?.token;
-//     if (!token) {
-//         return res.status(401).send({ message: "unauthorized access" });
-//     }
-//     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-//         if (err) {
-//             return res.status(401).send({ message: "unauthorized access" });
-//         }
-//         req.user = decoded;
-//         next();
-//     });
-// };
+const verifyToken = async (req, res, next) => {
+    const token = req?.cookies.token
+    console.log(token);
+    if (!token) {
+        return res.status(401).send({ message: "unauthorized access" });
+    }
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(401).send({ message: "unauthorized access" });
+        }
+        req.user = decoded;
+        next();
+    });
+};
 
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
         // Send a ping to confirm a successful connection
 
         const jobsCollection = client.db("jobsCollection").collection('jobs')
@@ -141,14 +144,21 @@ async function run() {
         })
 
 
-        app.get('/bidJobs', logger, async (req, res) => {
+        app.get('/bidJobs', logger, verifyToken, async (req, res) => {
+
+            const queryEmail = req.query?.email;
+            const tokenEmail = req.user?.email;
+            if(queryEmail !== tokenEmail){
+                return res.status(403).send({ message: "forbidden access" });
+            }
+
             const result = await BidjobsCollection.find().toArray();
             // console.log("cookiessssss", req.cookies);
             res.send(result)
 
         })
 
-        app.get('/bidJobs/:id', logger,  async (req, res) => {
+        app.get('/bidJobs/:id', logger, async (req, res) => {
             const userEmail = req.params.id;
             // console.log("cookiessssss", req.cookies);
             const query = { BuyerEmail: userEmail }
@@ -183,7 +193,7 @@ async function run() {
 
 
 
-        await client.db("admin").command({ ping: 1 });
+        // await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
