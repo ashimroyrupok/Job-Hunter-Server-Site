@@ -11,12 +11,12 @@ const port = process.env.PORT || 5000
 // middleware
 app.use(cors({
     origin: [
-       "http://localhost:5173"
+        "http://localhost:5173"
     ],
-    credentials:true
+    credentials: true
 }))
 app.use(express.json())
-app.use(cookieParser())
+
 
 
 
@@ -33,16 +33,24 @@ const client = new MongoClient(uri, {
 });
 
 // middleware
-const logger = (req,res,next) =>{
-    console.log( "logged info" ,req.method,req.url);
+const logger = async (req, res, next) => {
+    console.log("called:", req.host, req.originalUrl);
+    next();
+};
 
-    next()
-}
-const verifyToken = (req,res,next)=> {
-    const token = req.cookies?.token;
-    console.log("heheehheh", token);
-    next()
-}
+// const verifyToken = async (req, res, next) => {
+//     const token = req?.cookies?.token;
+//     if (!token) {
+//         return res.status(401).send({ message: "unauthorized access" });
+//     }
+//     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+//         if (err) {
+//             return res.status(401).send({ message: "unauthorized access" });
+//         }
+//         req.user = decoded;
+//         next();
+//     });
+// };
 
 async function run() {
     try {
@@ -56,22 +64,22 @@ async function run() {
 
         // authentication api
 
-        app.post('/jwt' ,logger, async(req,res) => {
+        app.post('/jwt', logger, async (req, res) => {
             const user = req.body;
-            console.log( "user to verify" , user);
-            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET , {expiresIn: "1h"})
-            res.cookie("token",token,{
-                httpOnly:true,
-                secure:true,
-                sameSite:"none"
+            console.log("user to verify", user);
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "1h" })
+            res.cookie("token", token, {
+                httpOnly: true,
+                secure: true,
+                sameSite: "none"
             }
-            )           
-            .send({success:true})
+            )
+                .send({ success: true })
         })
 
-        app.post('/logout', async(req,res) =>{
+        app.post('/logout', async (req, res) => {
             const user = req.body;
-            res.clearCookie('token', {maxAge:0}).send({success:true})
+            res.clearCookie('token', { maxAge: 0 }).send({ success: true })
         })
 
 
@@ -96,30 +104,30 @@ async function run() {
             res.send(result)
         })
 
-        app.put('/jobs/:id', async(req,res)=> {
+        app.put('/jobs/:id', async (req, res) => {
             const id = req.params.id
             const data = req.body
             // console.log("id", id,data);
-            const filter = {_id : new ObjectId(id)}
-            const options= {upsert : true}
+            const filter = { _id: new ObjectId(id) }
+            const options = { upsert: true }
             const updatedUSer = {
                 $set: {
                     jobTitle: data.jobTitle,
-                  selectedCategory: data.selectedCategory,
-                  minimumPice: data.minimumPice,
-                  maximumPrice: data.maximumPrice,
-                  deadline: data.deadline,
-                  description: data.description,
+                    selectedCategory: data.selectedCategory,
+                    minimumPice: data.minimumPice,
+                    maximumPrice: data.maximumPrice,
+                    deadline: data.deadline,
+                    description: data.description,
                 },
-              };
-              const result = await jobsCollection.updateOne(filter,updatedUSer,options)
-              res.send(result)
+            };
+            const result = await jobsCollection.updateOne(filter, updatedUSer, options)
+            res.send(result)
 
         })
 
-        app.delete('/jobs/:id', async(req,res) => {
+        app.delete('/jobs/:id', async (req, res) => {
             const id = req.params.id;
-            const query = {_id : new ObjectId(id)}
+            const query = { _id: new ObjectId(id) }
             const result = await jobsCollection.deleteOne(query);
             res.send(result)
         })
@@ -133,39 +141,38 @@ async function run() {
         })
 
 
-        app.get('/bidJobs', logger,verifyToken, async (req, res) => {
+        app.get('/bidJobs', logger, async (req, res) => {
             const result = await BidjobsCollection.find().toArray();
-            console.log("cookiessssss", req.cookies);
+            // console.log("cookiessssss", req.cookies);
             res.send(result)
 
         })
 
-        app.get('/bidJobs/:id',logger, async (req, res) => {
+        app.get('/bidJobs/:id', logger,  async (req, res) => {
             const userEmail = req.params.id;
-            console.log(userEmail);
-            console.log("cookiessssss", req.cookies);
+            // console.log("cookiessssss", req.cookies);
             const query = { BuyerEmail: userEmail }
             const result = await BidjobsCollection.find(query).toArray()
             res.send(result)
         })
 
-        app.patch("/bidJobs/:id" , async(req,res) => {
+        app.patch("/bidJobs/:id", async (req, res) => {
             const id = req.params.id;
             const data = req.body
-            const filter = {_id : new ObjectId(id)};
+            const filter = { _id: new ObjectId(id) };
             const updatedUSer = {
                 $set: {
-                  status: data.status,
-                  
-                },
-              };
+                    status: data.status,
 
-              const result = await BidjobsCollection.updateOne(filter,updatedUSer)
-              res.send(result)
-            
+                },
+            };
+
+            const result = await BidjobsCollection.updateOne(filter, updatedUSer)
+            res.send(result)
+
         })
 
-        
+
 
 
 
