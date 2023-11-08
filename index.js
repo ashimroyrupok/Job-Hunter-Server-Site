@@ -98,6 +98,32 @@ async function run() {
 
         })
 
+        app.get('/bidJobs/:id', async (req, res) => {
+            const userEmail = req.params.id;
+            console.log(userEmail);
+            const query = { BuyerEmail: userEmail }
+            const result = await BidjobsCollection.find(query).toArray()
+            res.send(result)
+        })
+
+        app.patch("/bidJobs/:id" , async(req,res) => {
+            const id = req.params.id;
+            const data = req.body
+            const filter = {_id : new ObjectId(id)};
+            const updatedUSer = {
+                $set: {
+                  status: data.status,
+                  
+                },
+              };
+
+              const result = await BidjobsCollection.updateOne(filter,updatedUSer)
+              res.send(result)
+            
+        })
+
+        
+
 
 
 
