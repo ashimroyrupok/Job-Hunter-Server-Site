@@ -11,7 +11,7 @@ const port = process.env.PORT || 5000
 // middleware
 app.use(cors({
     origin: [
-        // "http://localhost:5173"
+        "http://localhost:5173",
         "https://job-hunter-b5910.web.app",
         "https://job-hunter-b5910.firebaseapp.com"
     ],
@@ -34,7 +34,7 @@ const client = new MongoClient(uri, {
     }
 });
 
-// middleware
+// middleware created
 const logger = async (req, res, next) => {
     console.log("called:", req.host, req.originalUrl);
     next();
@@ -90,6 +90,7 @@ async function run() {
 
         app.post("/jobs", async (req, res) => {
             const jobs = req.body
+            // console.log(req.user?.email);
             const result = await jobsCollection.insertOne(jobs)
             res.send(result)
         })
@@ -100,8 +101,16 @@ async function run() {
 
         })
 
-        app.get('/jobs/:id', async (req, res) => {
+        app.get('/jobs/:id', logger, verifyToken, async (req, res) => {
             const userEmail = req.params.id;
+            console.log("heheheee", userEmail, req.user?.email);
+
+            const queryEmail = req.query?.email;
+            const tokenEmail = req.user?.email;
+            if (queryEmail !== tokenEmail) {
+                return res.status(403).send({ message: "forbidden access" });
+            }
+
             const query = { BuyerEmail: userEmail }
             const result = await jobsCollection.find(query).toArray()
             res.send(result)
@@ -145,15 +154,22 @@ async function run() {
 
 
         app.get('/bidJobs', logger, verifyToken, async (req, res) => {
-
+            const filter = req.query
+            console.log(filter);
+            const query = {}
+            const options = {
+                sort: {
+                    status: filter.sort === 'asc' ? 1 : -1
+                }
+            }
             const queryEmail = req.query?.email;
             const tokenEmail = req.user?.email;
-            if(queryEmail !== tokenEmail){
+            if (queryEmail !== tokenEmail) {
                 return res.status(403).send({ message: "forbidden access" });
             }
 
-            const result = await BidjobsCollection.find().toArray();
-            // console.log("cookiessssss", req.cookies);
+            const result = await BidjobsCollection.find(query, options).toArray();
+            console.log("cookiessssss", req.cookies);
             res.send(result)
 
         })
